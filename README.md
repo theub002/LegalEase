@@ -1,6 +1,6 @@
 # LegalEase
 
-LegalEase is a Streamlit-based AI legal assistant for Indian law. It helps users understand legal questions by retrieving relevant case-law context, mapping IPC sections to BNS sections, and surfacing relevant government schemes in a chat interface.
+LegalEase is a Streamlit-based AI legal assistant for Indian law. It helps users understand legal questions by retrieving relevant case-law context, mapping IPC sections to BNS sections, and surfacing relevant government schemes in a chat interfaces.
 
 ## What it does
 
