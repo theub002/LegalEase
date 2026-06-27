@@ -58,11 +58,28 @@ pip install -r requirements.txt
 
 * `app.py`
 * `backend.py`
+* `schemes.json`
 * `requirements.txt`
 * `case_data.csv`
 * `mapping.csv`
 
-### 4) Run the app
+### 4) Set up API Keys
+
+Configure your Sarvam API keys using one of the following methods:
+
+**Method A: Streamlit Secrets (Recommended)**
+Create a file at `.streamlit/secrets.toml` inside the project root directory and add your API keys:
+```toml
+SARVAM_API_KEYS = "key1,key2,key3"
+```
+
+**Method B: Environment Variables**
+Set the `SARVAM_API_KEYS` environment variable:
+* **Linux/macOS:** `export SARVAM_API_KEYS="key1,key2,key3"`
+* **Windows (Cmd):** `set SARVAM_API_KEYS="key1,key2,key3"`
+* **Windows (PowerShell):** `$env:SARVAM_API_KEYS="key1,key2,key3"`
+
+### 5) Run the app
 
 ```bash
 streamlit run app.py
@@ -93,8 +110,19 @@ streamlit run app.py
 .
 ├── app.py
 ├── backend.py
+├── schemes.json
 ├── requirements.txt
 ├── case_data.csv
 ├── mapping.csv
 └── README.md
 ```
+
+## Security & Reliability Enhancements (June 2026)
+
+The project has been refactored with the following improvements:
+
+1. **Security & API Keys:** Hardcoded API keys in `backend.py` have been removed. Keys are now securely loaded dynamically from Streamlit Secrets (`st.secrets`) or standard environment variables (`SARVAM_API_KEYS`).
+2. **Correctness of IPC Section Extraction:** The regex in `backend.py` was updated to require legal qualifiers (like "Section", "Sec", "IPC", "dhara") before extracting a section number, preventing false positives from matching arbitrary 3-digit numbers such as years (1860) or helpline numbers (1098).
+3. **Exact BNS Mapping Resolution:** Refactored the mapping logic to search the structured dictionary metadata in the `response` column of `mapping.csv` rather than performing loose substring matching. This ensures queries for specific sections (like `Section 37`) don't return unrelated sections (like `Section 376`).
+4. **Government Schemes Database:** Government schemes were extracted from the codebase into a clean, maintainable `schemes.json` configuration file.
+5. **Modern Theme Contrast:** Polished Streamlit dark mode contrast dynamically, solving the problem of unreadable black text on light grey backgrounds for chat input fields in dark mode.
