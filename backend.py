@@ -74,9 +74,10 @@ def extract_ipc_section(text):
 def get_bns_section(ipc_section):
     if not ipc_section:
         return "BNS equivalent not found"
-    # Ensure clean, exact string matching
-    section_str = str(ipc_section).strip().upper()
-    mask = ipc_df.iloc[:, 0].astype(str).str.strip().str.upper() == section_str
+    section_str = str(ipc_section).strip()
+    # Match structured key-value pair in response column, e.g., 'IPC Section': '376'
+    pattern = r"['\"]IPC Section['\"]\s*:\s*['\"]" + re.escape(section_str) + r"['\"]"
+    mask = ipc_df.iloc[:, 1].astype(str).str.contains(pattern, case=False, regex=True, na=False)
     result = ipc_df[mask]
     if len(result) > 0:
         return str(result.iloc[0, 1])[:400]
