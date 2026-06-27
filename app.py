@@ -31,8 +31,9 @@ if is_dark_mode:
     hero_grad_2 = "#93c5fd"
     subtitle_color = "#94a3b8"
     input_border = "#475569"
-    # Metallic dark gray so the black text remains readable in dark mode
-    input_bg = "#cbd5e1" 
+    input_bg = "#1e293b"
+    input_text = "#f8fafc"
+    input_placeholder = "#94a3b8"
 else:
     bg_color = "#f8fafc"          
     text_color = "#0f172a"        
@@ -48,6 +49,8 @@ else:
     subtitle_color = "#64748b"
     input_border = "#cbd5e1"
     input_bg = "#ffffff"
+    input_text = "#0f172a"
+    input_placeholder = "#64748b"
 
 # ----------- AGGRESSIVE PREMIUM CSS -----------
 st.markdown(f"""
@@ -157,17 +160,17 @@ div.stButton > button:first-child:hover {{
     border-radius: 20px !important;
 }}
 
-/* Force the typing text and cursor to ALWAYS be black */
+/* Force typing text and cursor colors to match theme dynamically */
 [data-testid="stChatInput"] textarea {{
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-    caret-color: #000000 !important;
+    color: {input_text} !important;
+    -webkit-text-fill-color: {input_text} !important;
+    caret-color: {input_text} !important;
 }}
 
-/* Ensure the placeholder text is slightly faded black so it looks normal */
+/* Ensure placeholder text matches theme dynamically */
 [data-testid="stChatInput"] textarea::placeholder {{
-    color: #333333 !important;
-    -webkit-text-fill-color: #333333 !important;
+    color: {input_placeholder} !important;
+    -webkit-text-fill-color: {input_placeholder} !important;
 }}
 
 /* Footer */

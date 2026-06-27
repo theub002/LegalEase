@@ -2,18 +2,42 @@ import pandas as pd
 import numpy as np
 import re
 import requests
+import os
+import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ─────────────────────────────────────────
-#  CONFIG — Add all your Sarvam API keys here
+#  CONFIG — Securely Load API Keys
 # ─────────────────────────────────────────
-SARVAM_API_KEYS = [ 
-    "API 1",
-    "API 2",
-    "API 3",
-    "API 4",
-]
+SARVAM_API_KEYS = []
+
+# 1. Check environment variables
+env_keys = os.getenv("SARVAM_API_KEYS")
+if env_keys:
+    SARVAM_API_KEYS = [k.strip() for k in env_keys.split(",") if k.strip()]
+else:
+    # 2. Check Streamlit secrets if available
+    try:
+        import streamlit as st
+        if "SARVAM_API_KEYS" in st.secrets:
+            secret_keys = st.secrets["SARVAM_API_KEYS"]
+            if isinstance(secret_keys, list):
+                SARVAM_API_KEYS = secret_keys
+            elif isinstance(secret_keys, str):
+                SARVAM_API_KEYS = [k.strip() for k in secret_keys.split(",") if k.strip()]
+    except Exception:
+        pass
+
+# 3. Fallback to placeholder list if nothing is configured
+if not SARVAM_API_KEYS:
+    SARVAM_API_KEYS = [ 
+        "API 1",
+        "API 2",
+        "API 3",
+        "API 4",
+    ]
+
 current_key_index = 0
 
 # ─────────────────────────────────────────
@@ -42,16 +66,17 @@ def search(query, top_k=5):
 #  IPC → BNS MAPPING
 # ─────────────────────────────────────────
 def extract_ipc_section(text):
-    matches = re.findall(r'\bSection\s+(\d{1,3}[A-Za-z]?)\b', text, re.IGNORECASE)
-    if matches:
-        return matches[0]
-    matches = re.findall(r'\b(\d{3}[A-Za-z]?)\b', text)
+    # Matches patterns like "Section 376", "Sec 420", "IPC 302", "dhara 302", etc.
+    # to avoid false positives with random 3-digit numbers like years/helplines.
+    matches = re.findall(r'\b(?:Section|Sec\.?|IPC|dhara)\s*(\d{1,3}[A-Za-z]?)\b', text, re.IGNORECASE)
     return matches[0] if matches else None
 
 def get_bns_section(ipc_section):
     if not ipc_section:
         return "BNS equivalent not found"
-    mask   = ipc_df.iloc[:, 0].astype(str).str.contains(str(ipc_section), na=False)
+    # Ensure clean, exact string matching
+    section_str = str(ipc_section).strip().upper()
+    mask = ipc_df.iloc[:, 0].astype(str).str.strip().str.upper() == section_str
     result = ipc_df[mask]
     if len(result) > 0:
         return str(result.iloc[0, 1])[:400]
@@ -60,88 +85,13 @@ def get_bns_section(ipc_section):
 # ─────────────────────────────────────────
 #  GOVERNMENT SCHEMES DATABASE
 # ─────────────────────────────────────────
-GOV_SCHEMES = [
-    {
-        "name": "National Legal Services Authority (NALSA) — Free Legal Aid",
-        "for": "Anyone with annual income < ₹3 lakh, women, SC/ST, disabled, victims of trafficking/disaster",
-        "what": "Free lawyer, free court fees, free legal advice",
-        "how": "Visit nearest District Legal Services Authority (DLSA) or call 15100",
-        "url": "https://nalsa.gov.in",
-        "keywords": ["legal aid", "lawyer", "free", "poor", "garib", "vakeel", "afford", "help"]
-    },
-    {
-        "name": "One Stop Centre (Sakhi) — Women in Distress",
-        "for": "Women affected by violence (domestic, sexual, harassment, trafficking)",
-        "what": "Shelter, police help, legal aid, medical aid, counseling — all under one roof",
-        "how": "Call Women Helpline 181 or visit nearest One Stop Centre",
-        "url": "https://wcd.nic.in/schemes/one-stop-centre",
-        "keywords": ["women", "violence", "domestic", "rape", "assault", "shelter", "abuse", "mahila", "aurat"]
-    },
-    {
-        "name": "Victim Compensation Scheme",
-        "for": "Victims of crimes like acid attack, rape, human trafficking, murder attempt",
-        "what": "Financial compensation ₹3 lakh to ₹10 lakh depending on crime",
-        "how": "Apply through DLSA or State Legal Services Authority",
-        "url": "https://nalsa.gov.in/services/victim-compensation",
-        "keywords": ["victim", "compensation", "money", "acid", "attack", "rape", "injury", "muavza"]
-    },
-    {
-        "name": "PM Visha Karma / Stand-Up India — Financial Support",
-        "for": "Women, SC/ST entrepreneurs who lost livelihood due to legal issues",
-        "what": "Loans ₹10 lakh to ₹1 crore for starting business",
-        "how": "Apply through any Scheduled Commercial Bank branch",
-        "url": "https://www.standupmitra.in",
-        "keywords": ["loan", "business", "money", "livelihood", "job", "employment", "paisa", "kaam"]
-    },
-    {
-        "name": "Beti Bachao Beti Padhao",
-        "for": "Girls/women facing discrimination, female foeticide, denied education",
-        "what": "Awareness, education support, reporting mechanism for gender crimes",
-        "how": "Contact District Women & Child Development Officer or call 181",
-        "url": "https://wcd.nic.in/bbbp-schemes",
-        "keywords": ["girl", "daughter", "beti", "education", "discrimination", "ladki", "school"]
-    },
-    {
-        "name": "SC/ST Prevention of Atrocities — Special Protection",
-        "for": "SC/ST victims of caste-based crimes, discrimination, violence",
-        "what": "Enhanced punishment for offenders, compensation for victims, special courts",
-        "how": "File FIR under SC/ST (Prevention of Atrocities) Act at any police station",
-        "url": "https://socialjustice.gov.in",
-        "keywords": ["caste", "sc", "st", "dalit", "discrimination", "untouchability", "jati", "reservation"]
-    },
-    {
-        "name": "Cyber Crime Reporting Portal",
-        "for": "Victims of online fraud, cyberbullying, social media harassment, sextortion",
-        "what": "Online FIR filing, anonymous reporting, tracking of complaints",
-        "how": "Visit cybercrime.gov.in or call 1930",
-        "url": "https://cybercrime.gov.in",
-        "keywords": ["cyber", "online", "fraud", "hack", "social media", "sextortion", "internet", "scam", "blackmail"]
-    },
-    {
-        "name": "Senior Citizens — Maintenance & Welfare Act",
-        "for": "Senior citizens (60+) abandoned/neglected by family",
-        "what": "Monthly maintenance from children/heirs, old age home, medical facilities",
-        "how": "Apply to Maintenance Tribunal (Sub-Divisional Magistrate) or call 14567 (Elder Line)",
-        "url": "https://socialjustice.gov.in",
-        "keywords": ["senior", "old", "elderly", "parents", "abandoned", "buzurg", "maa", "baap", "pension"]
-    },
-    {
-        "name": "Protection of Children — POCSO Helpline",
-        "for": "Children (under 18) facing sexual abuse, exploitation, violence",
-        "what": "Immediate rescue, FIR, medical exam, special court trial, compensation",
-        "how": "Call Childline 1098 or report at nearest police station",
-        "url": "https://wcd.nic.in",
-        "keywords": ["child", "minor", "bachcha", "pocso", "abuse", "school", "student"]
-    },
-    {
-        "name": "Pradhan Mantri Jan Arogya Yojana (Ayushman Bharat)",
-        "for": "Families with income < ₹5 lakh/year — especially useful for crime victims needing medical treatment",
-        "what": "Free hospital treatment up to ₹5 lakh per family per year",
-        "how": "Visit nearest Ayushman Bharat empaneled hospital with Aadhaar/ration card",
-        "url": "https://pmjay.gov.in",
-        "keywords": ["hospital", "medical", "treatment", "injury", "health", "doctor", "ilaj", "dawai"]
-    },
-]
+# Load schemes from external JSON file
+try:
+    schemes_path = os.path.join(os.path.dirname(__file__), "schemes.json") if "__file__" in globals() else "schemes.json"
+    with open(schemes_path, "r", encoding="utf-8") as f:
+        GOV_SCHEMES = json.load(f)
+except Exception:
+    GOV_SCHEMES = []
 
 def find_relevant_schemes(query, top_k=3):
     """Match user query keywords against government schemes."""
