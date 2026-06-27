@@ -58,11 +58,28 @@ pip install -r requirements.txt
 
 * `app.py`
 * `backend.py`
+* `schemes.json`
 * `requirements.txt`
 * `case_data.csv`
 * `mapping.csv`
 
-### 4) Run the app
+### 4) Set up API Keys
+
+Configure your Sarvam API keys using one of the following methods:
+
+**Method A: Streamlit Secrets (Recommended)**
+Create a file at `.streamlit/secrets.toml` inside the project root directory and add your API keys:
+```toml
+SARVAM_API_KEYS = "key1,key2,key3"
+```
+
+**Method B: Environment Variables**
+Set the `SARVAM_API_KEYS` environment variable:
+* **Linux/macOS:** `export SARVAM_API_KEYS="key1,key2,key3"`
+* **Windows (Cmd):** `set SARVAM_API_KEYS="key1,key2,key3"`
+* **Windows (PowerShell):** `$env:SARVAM_API_KEYS="key1,key2,key3"`
+
+### 5) Run the app
 
 ```bash
 streamlit run app.py
